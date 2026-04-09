@@ -1,0 +1,19 @@
+{% comment %} bundel product diffrent way static {% endcomment %}
+
+{% if product.metafields.custom.lineitembundels.value != blank %}
+  <div
+    class="metafield_product "
+    style="display:flex; margin: 10px 0; flex-wrap: wrap;"
+  >
+    {% for bundle in product.metafields.custom.lineitembundels.value %}
+      <div style="background-color:#e5deaee3; padding: 20px; margin:10px; display: grid;">
+        {{ bundle.title.value }}
+        {% for product_ref in bundle.bundel_product.value -%}
+          {{ product_ref.featured_image | image_url: width: 100, height: 100 | image_tag }}
+          <input type="hidden" name="id[]" value="{{ product_ref.selected_or_first_available_variant.id }}">
+          {{ product_ref.price | money }}
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

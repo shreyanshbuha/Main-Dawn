@@ -1,0 +1,43 @@
+{% if product.selling_plan_groups != empty %}
+  <div class="subscription-options">
+    <h3>Choose your subscription:</h3>
+    {% comment %} {{ product.selling_plan_groups | json }} {% endcomment %}
+    {% unless product.requires_selling_plan %}
+      <div style=" border: 1px solid black; padding: 20px; border-radius: 10px; margin:10px 0;">
+        <label>
+          <input
+            type="radio"
+            name="selling_plan"
+            value="{{ selling_plan.id }}"
+            id="selling-plan-{{ selling_plan.id }}"
+            checked
+          >
+          {{ 'products.subscription.one-time' | t }}
+        </label>
+      </div>
+    {% endunless %}
+    {% for group in product.selling_plan_groups %}
+      {% unless group.name == 'Pre Order' %}
+        <div style=" border: 1px solid black; padding: 20px; border-radius: 10px; margin:10px 0;">
+          {{ group.name }}
+          {% for selling_plan in group.selling_plans %}
+            <div class="selling-plan-option" data-selling-plan-id="{{ selling_plan.id }}">
+              <input
+                type="radio"
+                name="selling_plan"
+                value="{{ selling_plan.id }}"
+                id="selling-plan-{{ selling_plan.id }}"
+                {% comment %} {% if forloop.first %} checked {% endif %} {% endcomment %}
+              >
+              <label for="selling-plan-{{ selling_plan.id }}">
+                {{ selling_plan.name }}
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+      {% endunless %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div id="hidden-selling-plan-id"></div>

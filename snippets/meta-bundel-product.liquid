@@ -1,0 +1,794 @@
+<style>
+      .swatch-label {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid #ccc;
+      margin-right: 5px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    .bundle-option input[type="radio"] {
+      display: none;
+    }
+    .bundle-option input[type="radio"]:checked + .swatch-label {
+      border: 3px solid #000;
+    }
+    .del-data-color-variant {
+      width: 28px;
+      position: absolute;
+      top: 12px;
+      transform: rotate(-45deg);
+      background: black;
+  }
+  .bundle-product .swatch {
+    width: 30px;
+  }
+  .bundle-product .swatch-input__label{
+    margin: 0 3px;
+  }
+</style>
+{% if product.metafields.custom.main_product_dependent_bunch.value != blank %}
+{% liquid
+  assign option_disabled = true
+  if value.available
+    assign option_disabled = false
+  endif
+%}
+
+<div style="border: 1px solid black; padding: 10px; display: flex;">
+  <product-form>
+    {% form 'product', product, id: 'myForm' %}
+      <div class="bundle-variants-wrapper">
+        {% for product_bundle in product.metafields.custom.main_product_dependent_bunch.value %}
+          <div
+            class="bundle-product"
+            data-variants="{{ product_bundle.variants | json | escape }}"
+            style="margin:10px;text-align:center; position: relative;"
+          >
+            {% if product_bundle.selected_or_first_available_variant.featured_media != blank %}
+            <img
+              class="bundle-product-image"
+              src="{{ product_bundle.selected_or_first_available_variant.featured_media | image_url: width:300 }}"
+              width="150"
+              height="150"
+            >
+            {% else %}
+                <img
+              class="bundle-product-image"
+              src="{{ product_bundle.featured_image | image_url: width:300 }}"
+              width="150"
+              height="150"
+            >
+            {% endif %}
+
+            {% for option in product_bundle.options_with_values %}
+              {% assign display_name = option.name %}
+              {% if option.name == 'Colour' or option.name == 'Color' %}
+                {% assign display_name = 'Color' %}
+              {% endif %}
+
+              <fieldset
+                class="bundle-option"
+                  {% if option.name == 'Fabric' or option.name == 'Size' %}
+                    style="display:none;"
+                  {% endif %}
+              >
+                <legend>{{ option.name }}</legend>
+
+                {% for value in option.values %}
+                  {%- capture input_id -%}
+                    {{ section.id }}-{{ option.position }}-{{ forloop.index0 -}}
+                  {%- endcapture -%}
+
+                  {%- capture input_name -%}
+                    name="{{ option.name }}-{{ product.id }}"
+                  {%- endcapture -%}
+
+                  {%- capture input_dataset -%}
+                    data-product-url="{{ value.product_url }}"
+                    data-option-value-id="{{ value.id }}"
+                  {%- endcapture -%}
+                  {%- liquid
+                    assign swatch_focal_point = null
+                    if value.swatch.image
+                      assign image_url = value.swatch.image | image_url: width: 50
+                      assign swatch_value = 'url(' | append: image_url | append: ')'
+                      assign swatch_focal_point = value.swatch.image.presentation.focal_point
+                    elsif value.swatch.color
+                      assign swatch_value = 'rgb(' | append: value.swatch.color.rgb | append: ')'
+                    else
+                      assign swatch_value = null
+                    endif
+
+                    assign option_disabled = true
+                    if value.available
+                      assign option_disabled = false
+                    endif
+                  -%}
+                  {%- capture help_text -%}
+                    <span class="visually-hidden">{{ escaped_value }}</span>
+                    {{ label_unavailable }}
+                  {%- endcapture -%}
+
+                  {% if option.name == 'Color' %}
+                    {% render 'swatch-input',
+                      id: input_id,
+                      name: input_name,
+                      value: value,
+                      swatch: value.swatch,
+                      product_form_id: 'product-form',
+                      checked: value.selected,
+                      visually_disabled: option_disabled,
+                      help_text: help_text,
+                      additional_props: input_dataset,
+                      product_bundle: product_bundle,
+                      option_data: option_data,
+                      option: option
+                    %}
+                  {% else %}
+                    {% assign variant_for_value = null %}
+                    {% for variant in product_bundle.variants %}
+                      {% if variant.options contains value %}
+                        {% assign variant_for_value = variant %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    <input
+                      type="radio"
+                      id="{{ input_id }}"
+                     name="{{ option.name }}-{{ product_bundle.selected_or_first_available_variant.id }}"
+                      value="{{ value }}"
+                      data-product-index="{{ forloop.parentloop.index0 }}"
+                      form="{{ product_form_id }}"
+                      data-variant-id="{{ variant_for_value.id }}"
+                      form="{{ product_form_id }}"
+                      {% if value.selected %}
+                        checked
+                      {% endif %}
+                      {% if option_disabled %}
+                        class="disabled"
+                      {% endif %}
+                      data-option-position="{{ option.position }}"
+                      data-option-name="{{ option.name }}"
+                    >
+                    <label for="{{ input_id }}">
+                      {{ value -}}
+                      {{ label_unavailable }}
+                    </label>
+                  {% endif %}
+                {% endfor %}
+              </fieldset>
+            {% endfor %}
+            <input
+              type="hidden"
+              name="id"
+              class="product-variant-id"
+              value="{{ product_bundle.selected_or_first_available_variant.id }}"
+            >
+
+            <p>
+              Variant ID :
+              <span class="current-variant-id">
+                {{ product_bundle.selected_or_first_available_variant.id }}
+              </span>
+            </p>
+          </div>
+        {% endfor %}
+
+        <div class="product-form__error-message-wrapper" role="alert" hidden>
+          <span class="svg-wrapper">
+            {{- 'icon-error.svg' | inline_asset_content -}}
+          </span>
+          <span class="product-form__error-message"></span>
+        </div>
+
+        <div class="product-form__buttons">
+          {%- liquid
+            assign check_against_inventory = true
+            if product_bundle.selected_or_first_available_variant.inventory_management != 'shopify' or product_bundle.selected_or_first_available_variant.inventory_policy == 'continue'
+              assign check_against_inventory = false
+            endif
+            if product_bundle.selected_or_first_available_variant.quantity_rule.min > product_bundle.selected_or_first_available_variant.inventory_quantity and check_against_inventory
+              assign quantity_rule_soldout = true
+            endif
+          -%}
+          <button
+            id="ProductSubmitButton-{{ section_id }}"
+            type="submit"
+            name="add"
+            class=" product-form__submit button button--full-width {% if show_dynamic_checkout %}button--secondary{% else %}button--primary{% endif %}"
+             {% if product_bundle.selected_or_first_available_variant.available == false
+              or quantity_rule_soldout
+            %}
+              disabled
+            {% endif %}
+          >
+           <span>
+              {%- if product_bundle.selected_or_first_available_variant.available == false or quantity_rule_soldout -%}
+                {{ 'products.product.sold_out' | t }}
+              {%- else -%}
+                {{ 'products.product.add_to_cart' | t }}
+              {%- endif -%}
+            </span>
+            {%- render 'loading-spinner' -%}
+          </button>
+          {%- if show_dynamic_checkout -%}
+            {{ form | payment_button }}
+          {%- endif -%}
+        </div>
+      </div>
+    {% endform %}
+  </product-form>
+</div>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const mainVariants = {{ product.variants | json }};
+    const form = document.querySelector('.product-form form');
+    if (!form) return;
+    const bundleProducts = document.querySelectorAll('.bundle-product');
+
+    function syncBundles() {
+      const mainVariantId = form.querySelector('[name="id"]').value;
+      const currentMainVariant = mainVariants.find(v => v.id == mainVariantId);
+      if (!currentMainVariant) return;
+
+      bundleProducts.forEach(bundle => {
+        const hiddenInput = bundle.querySelector('.product-variant-id');
+        const variantIdDisplay = bundle.querySelector('.current-variant-id');
+        const variants = JSON.parse(bundle.dataset.variants);
+        const inputs = bundle.querySelectorAll('input[type="radio"]');
+
+      
+        inputs.forEach(radio => {
+          const optionName = radio.dataset.optionName.toLowerCase();
+          const optionPosition = parseInt(radio.dataset.optionPosition) - 1;
+
+          if (optionName === 'color' || optionName === 'colour') return;  
+
+          if (currentMainVariant.options[optionPosition] === radio.value) {
+            radio.checked = true;
+          } else {
+            radio.checked = false;
+          }
+        });
+
+        // update id
+        updateBundleVariant(bundle);
+      });
+    }
+
+    function updateBundleVariant(bundle) {
+      const hiddenInput = bundle.querySelector('.product-variant-id');
+      const variantIdDisplay = bundle.querySelector('.current-variant-id');
+      const img = bundle.querySelector('.bundle-product-image');
+      const variants = JSON.parse(bundle.dataset.variants);
+      const inputs = bundle.querySelectorAll('input[type="radio"]');
+
+      const selectedOptions = [];
+      inputs.forEach(input => {
+        if (input.checked) selectedOptions[input.dataset.optionPosition - 1] = input.value;
+      });
+
+      const matchedVariant = variants.find(v =>
+        v.options.every((opt, idx) => opt === selectedOptions[idx])
+      );
+
+      if (matchedVariant) {
+        hiddenInput.value = matchedVariant.id;
+        if (variantIdDisplay) variantIdDisplay.textContent = matchedVariant.id;
+        if (img && matchedVariant.featured_image) img.src = matchedVariant.featured_image.src;
+      }
+    }
+
+    syncBundles();
+
+    // main product sync
+    form.querySelector('[name="id"]').addEventListener('change', syncBundles);
+
+    bundleProducts.forEach(bundle => {
+      const inputs = bundle.querySelectorAll('input[type="radio"]');
+
+      inputs.forEach(input => {
+        input.addEventListener('change', (e) => {
+          e.stopPropagation();  
+          updateBundleVariant(bundle);
+        });
+
+        const label = bundle.querySelector(`label[for="${input.id}"]`);
+        if (label) {
+          label.addEventListener('click', (e) => {
+            e.preventDefault();  
+            input.checked = true;
+            updateBundleVariant(bundle);
+          });
+        }
+      });
+    });
+  });
+</script>
+{% endif %}
+
+
+
++++++++++++++++++++++++
+{% comment %}
+ complete workeble
+   <style>
+       .swatch-label {
+       display: inline-block;
+       width: 30px;
+       height: 30px;
+       border-radius: 50%;
+       border: 1px solid #ccc;
+       margin-right: 5px;
+       cursor: pointer;
+       vertical-align: middle;
+     }
+     .bundle-option input[type="radio"] {
+       display: none;
+     }
+     .bundle-option input[type="radio"]:checked + .swatch-label {
+       border: 3px solid #000;
+     }
+     .del-data-color-variant {
+       width: 28px;
+       position: absolute;
+       top: 12px;
+       transform: rotate(-45deg);
+       background: black;
+     }
+   </style>
+   {% liquid
+     assign option_disabled = true
+     if value.available
+       assign option_disabled = false
+     endif
+   %}
+
+   <div style="border: 1px solid black; padding: 10px; display: flex;">
+     <product-form>
+       {% form 'product', product, id: 'myForm' %}
+         <div class="bundle-variants-wrapper">
+           {% for product_bundle in product.metafields.custom.bundelproductimage.value %}
+             <div
+               class="bundle-product"
+               data-variants="{{ product_bundle.variants | json | escape }}"
+               style="margin:10px;text-align:center; position: relative;"
+             >
+               <img
+                 class="bundle-product-image"
+                 src="{{ product_bundle.selected_or_first_available_variant.featured_media | image_url: width:300 }}"
+                 width="150"
+                 height="150"
+               >
+
+               {% for option in product_bundle.options_with_values %}
+                 {% assign display_name = option.name %}
+                 {% if option.name == 'Colour' or option.name == 'Color' %}
+                   {% assign display_name = 'Color' %}
+                 {% endif %}
+
+                 <fieldset
+                   class="bundle-option"
+                   {% if option.name == 'Fabric' or option.name == 'Size' %}
+                     style="display:none;"
+                   {% endif %}
+                 >
+                   <legend>{{ display_name }}</legend>
+
+                   {% for value in option.values %}
+                     {% assign color_value = value | downcase %}
+                     <input
+                       type="radio"
+                       name="bundle-{{ option.name }}-{{ product_bundle.id }}"
+                       value="{{ value }}"
+                       data-option-name="{{ option.name }}"
+                       {% if value.selected %}
+                         checked
+                       {% endif %}
+                       id="bundle-{{ option.name }}-{{ product_bundle.id }}-{{ forloop.index0 }}"
+                     >
+                     <label
+                       for="bundle-{{ option.name }}-{{ product_bundle.id }}-{{ forloop.index0 }}"
+                       class="swatch-label"
+                       style="background-color: {{ color_value }};"
+                     >
+                     </label>
+                   {% endfor %}
+                 </fieldset>
+               {% endfor %}
+               <input
+                 type="hidden"
+                 name="id"
+                 class="product-variant-id"
+                 value="{{ product_bundle.selected_or_first_available_variant.id }}"
+               >
+
+               <p>
+                 Variant ID :
+                 <span class="current-variant-id">
+                   {{ product_bundle.selected_or_first_available_variant.id }}
+                 </span>
+               </p>
+             </div>
+           {% endfor %}
+           {% comment %} <button type="button" class="bundle-add-to-cart">Add to cart</button> {% endcomment %}
+
+           <div class="product-form__error-message-wrapper" role="alert" hidden>
+             <span class="svg-wrapper">
+               {{- 'icon-error.svg' | inline_asset_content -}}
+             </span>
+             <span class="product-form__error-message"></span>
+           </div>
+
+           <div class="product-form__buttons">
+             {%- liquid
+               assign check_against_inventory = true
+               if product_bundle.selected_or_first_available_variant.inventory_management != 'shopify' or product_bundle.selected_or_first_available_variant.inventory_policy == 'continue'
+                 assign check_against_inventory = false
+               endif
+               if product_bundle.selected_or_first_available_variant.quantity_rule.min > product_bundle.selected_or_first_available_variant.inventory_quantity and check_against_inventory
+                 assign quantity_rule_soldout = true
+               endif
+             -%}
+             <button
+               id="ProductSubmitButton-{{ section_id }}"
+               type="submit"
+               name="add"
+               class=" product-form__submit button button--full-width {% if show_dynamic_checkout %}button--secondary{% else %}button--primary{% endif %}"
+             >
+               <span>
+                 {{ 'products.product.add_to_cart' | t }}
+               </span>
+               {%- render 'loading-spinner' -%}
+             </button>
+             {%- if show_dynamic_checkout -%}
+               {{ form | payment_button }}
+             {%- endif -%}
+           </div>
+         </div>
+       {% endform %}
+     </product-form>
+   </div>
+
+   <script>
+     const mainVariants = {{ product.variants | json }};
+
+     function syncBundleVariants() {
+       const form = document.querySelector('.product-form form');
+       if (!form) return;
+
+       const mainVariantId = form.querySelector('[name="id"]').value;
+       const currentVariant = mainVariants.find(v => v.id == mainVariantId);
+       console.log(currentVariant,"currentVariant");
+       if (!currentVariant) return;
+
+       document.querySelectorAll('.bundle-product').forEach(bundle => {
+         const bundleVariants = JSON.parse(bundle.dataset.variants);
+         const selectedOptions = {};
+
+
+         bundle.querySelectorAll('input[type="radio"]').forEach(radio => {
+           const optionName = radio.dataset.optionName.toLowerCase();
+
+           // color
+           if (optionName.includes('color') || optionName.includes('colour')) return;
+
+           const mainIndex = currentVariant.options.findIndex(opt => opt === radio.value);
+           if (mainIndex !== -1) radio.checked = true;
+         });
+
+
+         bundle.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+           selectedOptions[radio.dataset.optionName] = radio.value;
+         });
+
+
+         const matchedVariant = bundleVariants.find(variant => {
+           return variant.options.every(opt => Object.values(selectedOptions).includes(opt));
+         });
+
+         if (matchedVariant) {
+           const hiddenInput = bundle.querySelector('.product-variant-id');
+           const display = bundle.querySelector('.current-variant-id');
+           const img = bundle.querySelector('.bundle-product-image');
+
+           if (hiddenInput) hiddenInput.value = matchedVariant.id;
+           if (display) display.textContent = matchedVariant.id;
+           if (img && matchedVariant.featured_image) img.src = matchedVariant.featured_image.src;
+         }
+       });
+     }
+
+
+     document.addEventListener('DOMContentLoaded', syncBundleVariants);
+
+     document.addEventListener('change', function (e) {
+
+       if (e.target.closest('variant-selects') || e.target.name === 'id') {
+         setTimeout(syncBundleVariants, 50);
+       }
+
+       if (e.target.matches('.bundle-product input[type="radio"]')) {
+         const bundle = e.target.closest('.bundle-product');
+         const bundleVariants = JSON.parse(bundle.dataset.variants);
+         const selected = [];
+
+         bundle.querySelectorAll('input[type="radio"]:checked').forEach(r => selected.push(r.value));
+
+         const matchedVariant = bundleVariants.find(v =>
+           v.options.every((opt, i) => opt === selected[i])
+         );
+
+         if (matchedVariant) {
+           const hiddenInput = bundle.querySelector('.product-variant-id');
+           const display = bundle.querySelector('.current-variant-id');
+           const img = bundle.querySelector('.bundle-product-image');
+
+           if (hiddenInput) hiddenInput.value = matchedVariant.id;
+           if (display) display.textContent = matchedVariant.id;
+           if (img && matchedVariant.featured_image) img.src = matchedVariant.featured_image.src;
+         }
+       }
+     });
+   </script>
+{% endcomment %}
++++++++++++++++++++++++++
+
+{% comment %}
+  {%- assign grouped_products = product.metafields.custom.bunch_free_products.value | map: 'product' | uniq -%}
+  {%- for p in grouped_products -%}
+    <form method="post" action="/cart/add" class="custom-bundle-form">
+      <!-- PRODUCT TITLE -->
+      <strong
+        class="bundle-title {% if forloop.first %}active{% endif %}"
+        data-target="bundle-{{ p.id }}"
+        style="cursor:pointer;"
+      >
+        {{ p.title }}
+      </strong>
+
+      <!-- PRODUCT BLOCK -->
+      <div
+        class="bundle-product"
+        id="bundle-{{ p.id }}"
+        style="display:flex; gap:20px; {% unless forloop.first %}display:none{% endunless %}"
+      >
+        {%- assign first_available_found = false -%}
+        {%- assign default_image = '' -%}
+        {%- assign default_price = '' -%}
+        {%- assign default_compare_price = '' -%}
+        {%- assign default_id = '' -%}
+
+        {%- for variant in product.metafields.custom.bunch_free_products.value -%}
+          {% if variant.product.id == p.id and variant.available and first_available_found == false %}
+            {% assign default_image = variant.featured_image | image_url: width: 400 %}
+            {% assign default_price = variant.price | money %}
+            {% assign default_compare_price = variant.compare_at_price | money %}
+            {% assign default_id = variant.id %}
+            {% assign first_available_found = true %}
+          {% endif %}
+        {%- endfor -%}
+
+        <div class="bundle-image">
+          <img class="variant-image" src="{{ default_image }}" width="100%">
+        </div>
+
+        <div class="bundle-price">
+          {{ default_price }}
+        </div>
+        <del class="bundle-compare-price">
+          {{ default_compare_price }}
+        </del>
+
+        <!-- VARIANTS -->
+        <div class="bundle-variants" style="display:grid;margin:10px;">
+          {%- assign first_available_found = false -%}
+
+          {%- for variant in product.metafields.custom.bunch_free_products.value -%}
+            {% if variant.product.id == p.id %}
+              <input
+                type="radio"
+                name="bundle_variant_{{ p.id }}"
+                value="{{ variant.id }}"
+                data-price="{{ variant.price | money }}"
+                data-compareprice="{{ variant.compare_at_price | money }}"
+                data-image="{{ variant.featured_image | image_url: width: 400 }}"
+
+                id="variant-{{ variant.id }}"
+                {% if variant.available and first_available_found == false %}
+                  checked
+                  {% assign first_available_found = true %}
+                {% endif %}
+                style="display:none"
+              >
+
+              {% assign option_name = variant.product.options[0] %}
+              <label for="variant-{{ variant.id }}">
+                {% if option_name == 'Color' %}
+                  <span
+                    class="variant-text"
+                    style="
+                      background: {{ variant.option1 | downcase }};
+                      width:20px;
+                      height:20px;
+                      display:inline-block;
+                      border-radius:50%;
+                    "
+                  ></span>
+                {% else %}
+                  <span
+                    class="variant-text"
+                    style="
+                      padding: 4px 10px;
+                      border: 1px solid; margin: 10px 15px;
+                    "
+                  >
+                    {{ variant.option1 }}
+                  </span>
+                {% endif %}
+              </label>
+            {% endif %}
+          {%- endfor -%}
+        </div>
+
+        <input
+          type="hidden"
+          name="id"
+          class="product-variant-id"
+          value="{{ default_id }}"
+          data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+        >
+      </div>
+
+      <!-- CUSTOM ADD TO CART BUTTON -->
+      <div class="product-form__buttons">
+        <button type="button" class="bundle-add-to-cart">Add to cart</button>
+      </div>
+    </form>
+  {%- endfor -%}
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const titles = document.querySelectorAll('.bundle-title');
+        const products = document.querySelectorAll('.bundle-product');
+
+        /* ---------- PRODUCT SWITCH ---------- */
+
+        function setActiveProduct(targetId) {
+          products.forEach((product) => {
+            if (product.id === targetId) {
+              product.style.display = 'flex';
+            } else {
+              product.style.display = 'none';
+            }
+          });
+        }
+
+        if (products.length) {
+          setActiveProduct(products[0].id);
+        }
+
+        titles.forEach((title) => {
+          title.addEventListener('click', function () {
+            const targetId = this.dataset.target;
+
+            setActiveProduct(targetId);
+
+            titles.forEach((t) => t.classList.remove('active'));
+            this.classList.add('active');
+          });
+        });
+
+        /* ---------- VARIANT CHANGE ---------- */
+
+        products.forEach((product) => {
+          const img = product.querySelector('.variant-image');
+          const price = product.querySelector('.bundle-price');
+          const Compareprice = product.querySelector('.bundle-compare-price');
+          const hiddenInput = product.querySelector('.product-variant-id');
+
+          const checked = product.querySelector("input[type='radio']:checked");
+
+          if (checked) {
+            hiddenInput.value = checked.value;
+
+            if (img) img.src = checked.dataset.image;
+            if (price) price.innerText = checked.dataset.price;
+            if (Compareprice) Compareprice.innerText = checked.dataset.compareprice;
+          }
+
+          product.querySelectorAll("input[type='radio']").forEach((radio) => {
+            radio.addEventListener('change', function () {
+              hiddenInput.value = this.value;
+
+              if (img) img.src = this.dataset.image;
+              if (price) price.innerText = this.dataset.price;
+              if (Compareprice) Compareprice.innerText = this.dataset.compareprice;
+            });
+          });
+        });
+
+        function setActiveProduct(targetId) {
+          products.forEach((product) => {
+            const form = product.closest('form');
+            const btnDiv = form.querySelector('.product-form__buttons');
+
+            if (product.id === targetId) {
+              product.style.display = 'flex';
+              if (btnDiv) btnDiv.style.display = 'block';
+            } else {
+              product.style.display = 'none';
+              if (btnDiv) btnDiv.style.display = 'none';
+            }
+          });
+        }
+
+        if (products.length > 0) setActiveProduct(products[0].id);
+
+        titles.forEach((title) => {
+          title.addEventListener('click', function () {
+            const targetId = this.dataset.target;
+            setActiveProduct(targetId);
+
+            titles.forEach((t) => t.classList.remove('active'));
+            this.classList.add('active');
+          });
+        });
+
+
+      let mainProductVariantTitle = "{{ product.selected_or_first_available_variant.title }}";
+      document.addEventListener('change', function(e){
+        if(e.target.closest('variant-selects') || e.target.name === 'id'){
+          const form = document.querySelector('.product-form form');
+          const variantId = form.querySelector('.product-form [name="id"]').value;
+          const variantData = {{ product.variants | json }};
+          const currentVariant = variantData.find(v => v.id == variantId);
+          if(currentVariant){
+            mainProductVariantTitle = currentVariant.title;
+            {% comment %} console.log(mainProductVariantTitle, "updated title"); {% endcomment %}
+          }
+        }
+      });
+
+      document.querySelectorAll('.bundle-add-to-cart').forEach((button) => {
+        button.addEventListener('click', function (e) {
+          e.preventDefault();
+
+          const form = this.closest('form');
+          const metafieldValue = form.querySelector('.product-variant-id').value;
+          {% comment %} console.log(mainProductVariantTitle, "variant title"); {% endcomment %}
+
+          fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: metafieldValue,
+              quantity: 1,
+              properties: {
+                'Size': mainProductVariantTitle
+              },
+            }),
+          })
+          .then((res) => res.json())
+          .then(() => fetch('/?section_id=cart-drawer'))
+          .then((res) => res.text())
+          .then((responseText) => {
+            const html = new DOMParser().parseFromString(responseText, 'text/html');
+            const newDrawer = html.querySelector('cart-drawer');
+            const currentDrawer = document.querySelector('cart-drawer');
+            if (newDrawer && currentDrawer) {
+              currentDrawer.replaceWith(newDrawer);
+              newDrawer.open();
+            }
+          });
+        });
+      });
+      });
+    </script>
+{% endcomment %}
