@@ -4,26 +4,26 @@ class CartRemoveButton extends HTMLElement {
 
     this.addEventListener('click', (event) => {
       event.preventDefault();
-
+      const cartItems = this.closest('cart-items') || this.closest('cart-drawer-items');
+      
         const isGift = $(this).data('is-gift');
-        console.log(isGift, "isGift");
+        if(isGift){
+          console.log(isGift, "isGift");
+          if (isGift) {
+            console.log("value are blocked");
+            return;
+          }
 
-        if (isGift) {
-          console.log("value are blocked");
-          return;
+          const key = this.dataset.lineKey;
+          const lineItemproperty = this.dataset.lineItemProperty;
+          console.log(lineItemproperty,"lineItemproperty")
+
+          const variantId = this.dataset.quantityVariantId;
+          console.log(variantId, "variantId");
+
+          cartItems.updateQuantity( this.dataset.index, 0, event, '', variantId, lineItemproperty, key );
         }
 
-      const cartItems = this.closest('cart-items') || this.closest('cart-drawer-items');
-
-      const key = this.dataset.lineKey;
-      const lineItemproperty = this.dataset.lineItemProperty;
-      console.log(lineItemproperty,"lineItemproperty")
-
-      const variantId = this.dataset.quantityVariantId;
-
-      console.log(variantId, "variantId");
-
-      cartItems.updateQuantity( this.dataset.index, 0, event, '', variantId, lineItemproperty, key );
     });
   }
 }
