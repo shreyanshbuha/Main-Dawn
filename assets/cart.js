@@ -1,6 +1,6 @@
-   const selectProductData = document.querySelector('.bundle-product-select');
+  const selectProductData = document.querySelector('.bundle-product-select');
 
-    if(selectProductData){
+  if(selectProductData){
       class CartRemoveButton extends HTMLElement {
         constructor() {
           super();
@@ -320,8 +320,8 @@
         );
       }
 
-    }
-    else{
+  }
+  else{
       class CartRemoveButton extends HTMLElement {
         constructor() {
           super();
@@ -729,4 +729,4 @@
           }
         );
       }
-}
+  }
