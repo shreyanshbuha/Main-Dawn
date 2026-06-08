@@ -1342,3 +1342,26 @@ class CartPerformance {
     );
   }
 }
+
+
+function toggleExtraProduct() {
+  const bundleSelect = document.querySelector('.bundle-product-select');
+  const extraBox = document.querySelector('.extra-product-box');
+
+  if (!bundleSelect || !extraBox) return;
+  if (bundleSelect.value === "I don't want to") {
+    extraBox.style.display = 'none';
+  } else {
+    extraBox.style.display = 'flex';
+  }
+}
+document.addEventListener('DOMContentLoaded', function () {
+
+  const bundleSelect = document.querySelector('.bundle-product-select');
+
+  if (!bundleSelect) return;
+
+  toggleExtraProduct();
+
+  bundleSelect.addEventListener('change', toggleExtraProduct);
+});
