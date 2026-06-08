@@ -23,7 +23,9 @@ class CartRemoveButton extends HTMLElement {
 
           cartItems.updateQuantity( this.dataset.index, 0, event, '', variantId, lineItemproperty, key );
         }
-
+        else{
+          cartItems.updateQuantity(this.dataset.index, 0, event);
+        }
     });
   }
 }
