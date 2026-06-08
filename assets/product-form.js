@@ -109,9 +109,6 @@ if (!customElements.get('product-form')) {
       }
 
       onSubmitHandler(evt) {
-        
-
-
           evt.preventDefault();
           if (this.submitButton.getAttribute('aria-disabled') === 'true') return;
 
@@ -290,184 +287,181 @@ if (!customElements.get('product-form')) {
               });
           }
           else{
+            const mainVariantId = this.form.querySelector('[name="id"]').value;
+            const qty = parseInt(this.form.querySelector('[name="quantity"]')?.value) || 1;
 
+            const unlockedGifts = document.querySelectorAll('.gift-item:not(.locked)');
+            const metaproduct = document.querySelectorAll('.metafield_product input[name="id[]"]:checked');
 
-            
-          const mainVariantId = this.form.querySelector('[name="id"]').value;
-          const qty = parseInt(this.form.querySelector('[name="quantity"]')?.value) || 1;
+            const uniqueId = Math.floor(Math.random() * 1000000000);
 
-          const unlockedGifts = document.querySelectorAll('.gift-item:not(.locked)');
-          const metaproduct = document.querySelectorAll('.metafield_product input[name="id[]"]:checked');
+            let items = [];
 
-          const uniqueId = Math.floor(Math.random() * 1000000000);
-
-          let items = [];
-
-          // BUNDLE gift product
-          if (unlockedGifts.length > 0) {
-            items.push({
-              id: mainVariantId,
-              quantity: qty,
-              properties: { _group: uniqueId }
-            });
-
-            unlockedGifts.forEach(gift => {
+            // BUNDLE gift product
+            if (unlockedGifts.length > 0) {
               items.push({
-                id: gift.dataset.giftId,
+                id: mainVariantId,
                 quantity: qty,
-                properties: {
-                  _group: uniqueId,
-                  parent_id: mainVariantId
-                }
+                properties: { _group: uniqueId }
               });
-            });
-          }
-          else if (metaproduct.length > 0) {   // METAFIELD
-            const uniqueIds = [...new Set(
-              Array.from(metaproduct).map(cb => cb.value)
-            )];
 
-            items.push({
-              id: mainVariantId,
-              quantity: qty,
-              properties: { unique_identifier: uniqueId }
-            });
+              unlockedGifts.forEach(gift => {
+                items.push({
+                  id: gift.dataset.giftId,
+                  quantity: qty,
+                  properties: {
+                    _group: uniqueId,
+                    parent_id: mainVariantId
+                  }
+                });
+              });
+            }
+            else if (metaproduct.length > 0) {   // METAFIELD
+              const uniqueIds = [...new Set(
+                Array.from(metaproduct).map(cb => cb.value)
+              )];
 
-            uniqueIds.forEach(id => {
               items.push({
-                id: id,
-                quantity: 1,
+                id: mainVariantId,
+                quantity: qty,
                 properties: { unique_identifier: uniqueId }
               });
+
+              uniqueIds.forEach(id => {
+                items.push({
+                  id: id,
+                  quantity: 1,
+                  properties: { unique_identifier: uniqueId }
+                });
+              });
+            }
+            else {
+              items.push({
+                id: mainVariantId,
+                quantity: qty
+              });
+            }
+
+            const formData = new FormData();
+            items.forEach((item, index) => {
+
+              formData.append(`items[${index}][id]`, item.id);
+              formData.append(`items[${index}][quantity]`, item.quantity);
+              if (item.properties) {
+                Object.keys(item.properties).forEach(key => {
+                  formData.append(`items[${index}][properties][${key}]`, item.properties[key]);
+                });
+              }
             });
-          }
-          else {
-            items.push({
-              id: mainVariantId,
-              quantity: qty
-            });
-          }
 
-          const formData = new FormData();
-          items.forEach((item, index) => {
-
-            formData.append(`items[${index}][id]`, item.id);
-            formData.append(`items[${index}][quantity]`, item.quantity);
-            if (item.properties) {
-              Object.keys(item.properties).forEach(key => {
-                formData.append(`items[${index}][properties][${key}]`, item.properties[key]);
-              });
-            }
-          });
-
-          if (this.cart) {
-            formData.append('sections',this.cart.getSectionsToRender().map(section => section.id));
-            formData.append('sections_url', window.location.pathname);
-          }
-
-          fetch('/cart/add.js', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-              items: items,
-              sections: this.cart.getSectionsToRender().map(section => section.id),
-              sections_url: window.location.pathname
-            })
-          })
-          .then(res => res.json())
-          .then(response => {
-            if (response.status) {
-              publish(PUB_SUB_EVENTS.cartError, {
-                source: 'product-form',
-                productVariantId: formData.get('id'),
-                errors: response.errors || response.description,
-                message: response.message,
-              });
-              this.handleErrorMessage(response.description);
-
-              const soldOutMessage = this.submitButton.querySelector('.sold-out-message');
-              if (!soldOutMessage) return;
-              this.submitButton.setAttribute('aria-disabled', true);
-              this.submitButtonText.classList.add('hidden');
-              soldOutMessage.classList.remove('hidden');
-              this.error = true;
-              return;
-            } else if (!this.cart) {
-              window.location = window.routes.cart_url;
-              return;
+            if (this.cart) {
+              formData.append('sections',this.cart.getSectionsToRender().map(section => section.id));
+              formData.append('sections_url', window.location.pathname);
             }
 
-            const startMarker = CartPerformance.createStartingMarker('add:wait-for-subscribers');
-            if (!this.error)
-              publish(PUB_SUB_EVENTS.cartUpdate, {
-                source: 'product-form',
-                productVariantId: formData.get('id'),
-                cartData: response,
-              }).then(() => {
-                CartPerformance.measureFromMarker('add:wait-for-subscribers', startMarker);
-              });
-            this.error = false;
-            const quickAddModal = this.closest('quick-add-modal');
-            if (quickAddModal) {
-              document.body.addEventListener(
-                'modalClosed',
-                () => {
-                  setTimeout(() => {
-                    CartPerformance.measure("add:paint-updated-sections", () => {
-                      this.cart.renderContents(response);
-                    });
-                  });
-                },
-                { once: true }
-              );
-              quickAddModal.hide(true);
-            } else {
-              CartPerformance.measure("add:paint-updated-sections", () => {
-                this.cart.renderContents(response);
-              });
-            }
-
-             fetch(`${routes.cart_url}`, config)
-              .then((res) => res.json())
-              .then((res) => {
-                console.log(res,"res");
-
-                const price = res.total_price;
-                const FREE_GIFT_VARIANT_ID = document.querySelector('body').dataset.freeProduct;
-                const hasFreeGift = res.items.some(item => item.variant_id == FREE_GIFT_VARIANT_ID);
-
-                this.addFreeGift(price,hasFreeGift);
-
-
-                  // const ItemCount = res.item_count;
-                  // const shipId = $('.shipping-protection-checkbox').data('shipping-protection-id');
-                  // // console.log(shipId,"shipId");
-                  // const hasShipData = res.items.some(item => item.variant_id == shipId);
-                  // // console.log(hasShipData,"hasShipData1");
-                  // if(hasFreeGift) return;
-                  // if (!shipId) return;
-                  //   this.shippingProtection(hasShipData, ItemCount);
-
-                   
-                
+            fetch('/cart/add.js', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: JSON.stringify({
+                items: items,
+                sections: this.cart.getSectionsToRender().map(section => section.id),
+                sections_url: window.location.pathname
               })
+            })
+            .then(res => res.json())
+            .then(response => {
+              if (response.status) {
+                publish(PUB_SUB_EVENTS.cartError, {
+                  source: 'product-form',
+                  productVariantId: formData.get('id'),
+                  errors: response.errors || response.description,
+                  message: response.message,
+                });
+                this.handleErrorMessage(response.description);
 
-              this.CartTimer(true);
-          })
-          .catch((e) => {
-            console.error(e);
-          })
-          .finally(() => {
-            this.submitButton.classList.remove('loading');
-            if (this.cart && this.cart.classList.contains('is-empty')) this.cart.classList.remove('is-empty');
-            if (!this.error) this.submitButton.removeAttribute('aria-disabled');
-            this.querySelector('.loading__spinner').classList.add('hidden');
+                const soldOutMessage = this.submitButton.querySelector('.sold-out-message');
+                if (!soldOutMessage) return;
+                this.submitButton.setAttribute('aria-disabled', true);
+                this.submitButtonText.classList.add('hidden');
+                soldOutMessage.classList.remove('hidden');
+                this.error = true;
+                return;
+              } else if (!this.cart) {
+                window.location = window.routes.cart_url;
+                return;
+              }
 
-            CartPerformance.measureFromEvent("add:user-action", evt);
-          });
+              const startMarker = CartPerformance.createStartingMarker('add:wait-for-subscribers');
+              if (!this.error)
+                publish(PUB_SUB_EVENTS.cartUpdate, {
+                  source: 'product-form',
+                  productVariantId: formData.get('id'),
+                  cartData: response,
+                }).then(() => {
+                  CartPerformance.measureFromMarker('add:wait-for-subscribers', startMarker);
+                });
+              this.error = false;
+              const quickAddModal = this.closest('quick-add-modal');
+              if (quickAddModal) {
+                document.body.addEventListener(
+                  'modalClosed',
+                  () => {
+                    setTimeout(() => {
+                      CartPerformance.measure("add:paint-updated-sections", () => {
+                        this.cart.renderContents(response);
+                      });
+                    });
+                  },
+                  { once: true }
+                );
+                quickAddModal.hide(true);
+              } else {
+                CartPerformance.measure("add:paint-updated-sections", () => {
+                  this.cart.renderContents(response);
+                });
+              }
+
+              fetch(`${routes.cart_url}`, config)
+                .then((res) => res.json())
+                .then((res) => {
+                  console.log(res,"res");
+
+                  const price = res.total_price;
+                  const FREE_GIFT_VARIANT_ID = document.querySelector('body').dataset.freeProduct;
+                  const hasFreeGift = res.items.some(item => item.variant_id == FREE_GIFT_VARIANT_ID);
+
+                  this.addFreeGift(price,hasFreeGift);
+
+
+                    // const ItemCount = res.item_count;
+                    // const shipId = $('.shipping-protection-checkbox').data('shipping-protection-id');
+                    // // console.log(shipId,"shipId");
+                    // const hasShipData = res.items.some(item => item.variant_id == shipId);
+                    // // console.log(hasShipData,"hasShipData1");
+                    // if(hasFreeGift) return;
+                    // if (!shipId) return;
+                    //   this.shippingProtection(hasShipData, ItemCount);
+
+                    
+                  
+                })
+
+                this.CartTimer(true);
+            })
+            .catch((e) => {
+              console.error(e);
+            })
+            .finally(() => {
+              this.submitButton.classList.remove('loading');
+              if (this.cart && this.cart.classList.contains('is-empty')) this.cart.classList.remove('is-empty');
+              if (!this.error) this.submitButton.removeAttribute('aria-disabled');
+              this.querySelector('.loading__spinner').classList.add('hidden');
+
+              CartPerformance.measureFromEvent("add:user-action", evt);
+            });
 
         }
 
