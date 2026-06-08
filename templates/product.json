@@ -34,20 +34,8 @@
             "swatch_shape": "circle"
           }
         },
-        "static_bundel_products_hg3iQW": {
-          "type": "static_bundel_products",
-          "settings": {}
-        },
         "quantity_selector": {
           "type": "quantity_selector",
-          "settings": {}
-        },
-        "subscription_zyn7yC": {
-          "type": "subscription",
-          "settings": {}
-        },
-        "meta_bundel_product_trJhe4": {
-          "type": "meta_bundel_product",
           "settings": {}
         },
         "buy_buttons": {
@@ -73,10 +61,7 @@
         "title",
         "price",
         "variant_picker",
-        "static_bundel_products_hg3iQW",
         "quantity_selector",
-        "subscription_zyn7yC",
-        "meta_bundel_product_trJhe4",
         "buy_buttons",
         "description",
         "share"
@@ -87,10 +72,10 @@
         "media_size": "large",
         "constrain_to_viewport": true,
         "media_fit": "contain",
-        "gallery_layout": "stacked",
+        "gallery_layout": "thumbnail_slider",
         "mobile_thumbnails": "hide",
         "media_position": "left",
-        "image_zoom": "lightbox",
+        "image_zoom": "none",
         "hide_variants": true,
         "enable_video_looping": false,
         "padding_top": 36,
