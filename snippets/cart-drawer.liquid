@@ -166,7 +166,7 @@
                   </thead>
 
                   {%- for parent_item in cart.items -%}
-                    {% if child_item_propertie_id = child_item.properties._bundle_id %}
+                    {% if parent_item.properties._bundle_id %}
                       {% unless parent_item.parent_relationship.parent %}
                         {% assign child_total = 0 %}
                         {% assign child_qty = 0 %}
