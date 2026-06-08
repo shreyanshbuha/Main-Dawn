@@ -109,23 +109,23 @@ if (!customElements.get('product-form')) {
       }
 
       onSubmitHandler(evt) {
-          evt.preventDefault();
-          if (this.submitButton.getAttribute('aria-disabled') === 'true') return;
+        evt.preventDefault();
+        if (this.submitButton.getAttribute('aria-disabled') === 'true') return;
 
-          this.handleErrorMessage();
+        this.handleErrorMessage();
 
-          this.submitButton.setAttribute('aria-disabled', true);
-          this.submitButton.classList.add('loading');
-          this.querySelector('.loading__spinner').classList.remove('hidden');
+        this.submitButton.setAttribute('aria-disabled', true);
+        this.submitButton.classList.add('loading');
+        this.querySelector('.loading__spinner').classList.remove('hidden');
 
-          const config = fetchConfig('javascript');
-          config.headers['X-Requested-With'] = 'XMLHttpRequest';
-          delete config.headers['Content-Type'];
+        const config = fetchConfig('javascript');
+        config.headers['X-Requested-With'] = 'XMLHttpRequest';
+        delete config.headers['Content-Type'];
 
 
-          const selectProductData = document.querySelector('.bundle-product-select');
+        const selectProductData = document.querySelector('.bundle-product-select');
 
-          if(selectProductData){
+        if(selectProductData){
             const formData = new FormData(this.form);
             if (this.cart) {
               formData.append(
@@ -285,8 +285,8 @@ if (!customElements.get('product-form')) {
 
                 CartPerformance.measureFromEvent("add:user-action", evt);
               });
-          }
-          else{
+        }
+        else{
             const mainVariantId = this.form.querySelector('[name="id"]').value;
             const qty = parseInt(this.form.querySelector('[name="quantity"]')?.value) || 1;
 
@@ -464,7 +464,6 @@ if (!customElements.get('product-form')) {
             });
 
         }
-
       }
 
       CartTimer(reset = false) {
