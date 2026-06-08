@@ -141,6 +141,7 @@ if (!customElements.get('product-form')) {
             console.log(mainVariantId,"mainVariantId"); 
             
             const freeProductId = document.querySelector('body').dataset.freeProductId;
+            console.log(freeProductId,"freeProductId"); 
             let uniqueId = Math.floor(Math.random() * 1000000000);
 
             const qtyInput = this.form.elements['quantity'];
