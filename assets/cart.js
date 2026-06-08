@@ -110,11 +110,13 @@ class CartItems extends HTMLElement {
 
     const input = event.target;
     const isGift = input.closest('.quantity-popover-container')?.dataset?.isGift;
-    console.log(isGift, "isGift");
+    if(isGift){
+      console.log(isGift, "isGift");
 
-    if (isGift === "true") {
-      console.log("value are blocked");
-      return;
+      if (isGift === "true") {
+        console.log("value are blocked");
+        return;
+      }
     }
 
     this.validateQuantity(event);
